@@ -1,36 +1,59 @@
-/**
- * This file will automatically be loaded by vite and run in the "renderer" context.
- * To learn more about the differences between the "main" and the "renderer" context in
- * Electron, visit:
- *
- * https://electronjs.org/docs/tutorial/process-model
- *
- * By default, Node.js integration in this file is disabled. When enabling Node.js integration
- * in a renderer process, please be aware of potential security implications. You can read
- * more about security risks here:
- *
- * https://electronjs.org/docs/tutorial/security
- *
- * To enable Node.js integration in this file, open up `main.js` and enable the `nodeIntegration`
- * flag:
- *
- * ```
- *  // Create the browser window.
- *  mainWindow = new BrowserWindow({
- *    width: 800,
- *    height: 600,
- *    webPreferences: {
- *      nodeIntegration: true
- *    }
- *  });
- * ```
- */
+import './styles/index.css';
+import 'vfonts/Lato.css';
+// import 'highlight.js/styles/lioshi.css';
 
-import './index.css';
-import { createApp } from 'vue';
-import App from './App.vue';
+import { createApp, type Plugin } from 'vue';
+import { createRouter, createMemoryHistory } from 'vue-router';
+import { createPinia } from 'pinia';
 import i18n from './i18n';
+import errorHandler from './utils/errorHandler';
+import App from '../renderer/App.vue';
 
-createApp(App)
+import TitleBar from './components/TitleBar.vue';
+import DragRegion from './components/DragRegion.vue';
+
+import hljs from 'highlight.js/lib/core';
+import xml from 'highlight.js/lib/languages/xml';
+import { preloadIcons } from './utils/icons';
+import logger from './utils/logger';
+
+hljs.registerLanguage('vue', xml);
+
+const components: Plugin = function (app) {
+  app.component('TitleBar', TitleBar);
+  app.component('DragRegion', DragRegion);
+}
+
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [
+    {
+      path: '/',
+      component: () => import('./views/index.vue'),
+      children: [
+        {
+          path: '/',
+          redirect: 'conversation'
+        },
+        {
+          name: 'conversation',
+          path: 'conversation/:id?',
+          component: () => import('./views/conversation.vue')
+        }
+      ]
+    },
+  ],
+})
+
+const pinia = createPinia();
+
+preloadIcons().finally(() => {
+  logger.info('Icons preloaded');
+  createApp(App)
+    .use(pinia)
+    .use(router)
+    .use(components)
     .use(i18n)
+    .use(errorHandler)
     .mount('#app');
+})
