@@ -1,11 +1,22 @@
 import { app, BrowserWindow } from 'electron';
-import started from 'electron-squirrel-startup';
 import { setupWindows } from './wins';
+import started from 'electron-squirrel-startup';
+import configManager from './service/ConfigService';
+import logManager from './service/LogService';
+import { CONFIG_KEYS } from '@common/constants';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
+
+process.on('uncaughtException', (err) => {
+  logManager.error('uncaughtException', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logManager.error('unhandledRejection', reason, promise);
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -26,7 +37,8 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (process.platform !== 'darwin' && !configManager.get(CONFIG_KEYS.MINIMIZE_TO_TRAY)) {
+    logManager.info('app closing due to all windows being closed');
     app.quit();
   }
 });
